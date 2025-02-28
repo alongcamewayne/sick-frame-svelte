@@ -4,18 +4,15 @@
 	import { getFrame } from '$lib/index.js';
 
 	const frame = getFrame();
-	let unwatch: Awaited<ReturnType<typeof frame.watchFrameEvents>>;
+	let unwatch: () => void;
 
 	onMount(async () => {
 		unwatch = await frame.watchFrameEvents({
-			onFrameAdded: async (data) => {
-				console.log(data);
-				setTimeout(async () => {
-					console.log(await frame.sdk?.context);
-				}, 3000);
+			onFrameAdded: async ({ data }) => {
+				console.log('frame added:', data);
 			},
-			onFrameAddRejected: () => {
-				console.log('frame add rejecteds');
+			onFrameAddRejected: ({ data }) => {
+				console.log('permission denied:', data.reason);
 			},
 			onFrameRemoved: () => {
 				console.log('frame removed');
@@ -24,7 +21,7 @@
 	});
 
 	onDestroy(() => {
-		if (unwatch) unwatch();
+		unwatch?.();
 	});
 </script>
 
