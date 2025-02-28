@@ -61,6 +61,11 @@ class FrameSdkInstance {
 		return this.#safeArea;
 	}
 
+	get isDesktop() {
+		if (typeof window === 'undefined') return;
+		return window.self !== window.top;
+	}
+
 	private loadSdk = async () => {
 		// only load sdk in the browser or if it hasn't been loaded yet
 		if (typeof window === 'undefined' || this.#sdk || this.#hasRunOnLoad) return;
