@@ -1,13 +1,31 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { PUBLIC_BASE_URL } from '$env/static/public';
 	import { getFrame } from '$lib/index.js';
 
 	const frame = getFrame();
+	let unwatch: Awaited<ReturnType<typeof frame.watchFrameEvents>>;
 
-	$inspect(frame.context);
+	onMount(async () => {
+		unwatch = await frame.watchFrameEvents({
+			onFrameAdded: async (data) => {
+				console.log(data);
+				setTimeout(async () => {
+					console.log(await frame.sdk?.context);
+				}, 3000);
+			},
+			onFrameAddRejected: () => {
+				console.log('frame add rejecteds');
+			},
+			onFrameRemoved: () => {
+				console.log('frame removed');
+			},
+		});
+	});
 
-	onMount(() => {});
+	onDestroy(() => {
+		if (unwatch) unwatch();
+	});
 </script>
 
 <svelte:head>
@@ -30,6 +48,7 @@
 </svelte:head>
 
 <div class="flex min-h-screen flex-col items-center justify-center bg-white">
+	<p>{frame.isDesktop}</p>
 	{#if frame.isFrame}
 		{#if frame.isFrameAdded}
 			<p>frame added</p>
