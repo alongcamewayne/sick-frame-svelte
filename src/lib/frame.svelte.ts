@@ -68,9 +68,9 @@ class FrameSdkInstance {
 		// only watch events in the browser
 		if (typeof window === 'undefined') return () => {};
 
-		// wait for sdk to load
 		if (!this.#sdk) {
-			await new Promise((resolve) => setTimeout(resolve, 1000));
+			// wait for sdk to load
+			await new Promise((resolve) => setTimeout(resolve, 1500));
 
 			// check sdk again
 			if (!this.#sdk) {
@@ -103,8 +103,8 @@ class FrameSdkInstance {
 			// register event listeners
 			this.#unregisterFrameEvents = registerFrameEventListeners(this.#sdk);
 			this.watchFrameEvents({
-				onFrameAdded: async () => (this.#isFrameAdded = true),
-				onFrameRemoved: async () => (this.#isFrameAdded = false),
+				onFrameAdded: () => (this.#isFrameAdded = true),
+				onFrameRemoved: () => (this.#isFrameAdded = false),
 			});
 
 			// Run onLoad callback
