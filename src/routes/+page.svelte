@@ -4,7 +4,7 @@
 	import { getFrame } from '$lib/index.js';
 
 	const frame = getFrame();
-	let unwatch: Awaited<ReturnType<typeof frame.watchFrameEvents>>;
+	let unwatch: () => void;
 
 	onMount(async () => {
 		unwatch = await frame.watchFrameEvents({
