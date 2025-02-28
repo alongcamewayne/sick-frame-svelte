@@ -66,15 +66,17 @@ class FrameSdkInstance {
 
 	public watchFrameEvents = async (handlers: FrameEventHandlers) => {
 		// only watch events in the browser
-		if (typeof window === 'undefined') return;
+		if (typeof window === 'undefined') return () => {};
 
 		// wait for sdk to load
-		if (!this.#sdk) await new Promise((resolve) => setTimeout(resolve, 1000));
-
-		// check sdk again
 		if (!this.#sdk) {
-			console.warn('Frame SDK not loaded yet.');
-			return;
+			await new Promise((resolve) => setTimeout(resolve, 1000));
+
+			// check sdk again
+			if (!this.#sdk) {
+				console.warn('Unable to watch frame events because the SDK has not been loaded.');
+				return () => {};
+			}
 		}
 
 		return watchFrameEvents(handlers);
