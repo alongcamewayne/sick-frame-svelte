@@ -1,6 +1,11 @@
 import { getContext, onDestroy, setContext } from 'svelte';
 import type { FrameSDK } from '@farcaster/frame-sdk/dist/types.js';
 import type { Context } from '@farcaster/frame-sdk';
+import {
+	registerFrameEventListeners,
+	watchFrameEvents,
+	type FrameEventHandlers,
+} from './events.js';
 
 const FRAME_SDK_KEY = Symbol('frame-sdk');
 
@@ -25,10 +30,7 @@ class FrameSdkInstance {
 	#hasRunOnLoad: boolean = false;
 	#deferReady: boolean = false;
 	#safeArea: Context.SafeAreaInsets = $state({ top: 0, right: 0, bottom: 0, left: 0 });
-	#context: Context.FrameContext = $state({
-		user: { fid: 0 },
-		client: { clientFid: 0, added: false },
-	});
+	#unregisterFrameEvents: (() => void) | undefined;
 
 	constructor(opts: FrameSdkInstanceConstructor = {}) {
 		this.#deferReady = opts.deferReady ?? false;
@@ -36,17 +38,13 @@ class FrameSdkInstance {
 		this.loadSdk();
 
 		onDestroy(() => {
-			if (!this.#sdk) return;
-			this.#sdk.removeAllListeners();
+			if (this.#sdk) this.#sdk.removeAllListeners();
+			if (this.#unregisterFrameEvents) this.#unregisterFrameEvents();
 		});
 	}
 
 	get sdk() {
 		return this.#sdk;
-	}
-
-	get context() {
-		return this.#context;
 	}
 
 	get isFrame() {
@@ -66,6 +64,22 @@ class FrameSdkInstance {
 		return window.self !== window.top;
 	}
 
+	public watchFrameEvents = async (handlers: FrameEventHandlers) => {
+		// only watch events in the browser
+		if (typeof window === 'undefined') return;
+
+		// wait for sdk to load
+		if (!this.#sdk) await new Promise((resolve) => setTimeout(resolve, 1000));
+
+		// check sdk again
+		if (!this.#sdk) {
+			console.warn('Frame SDK not loaded yet.');
+			return;
+		}
+
+		return watchFrameEvents(handlers);
+	};
+
 	private loadSdk = async () => {
 		// only load sdk in the browser or if it hasn't been loaded yet
 		if (typeof window === 'undefined' || this.#sdk || this.#hasRunOnLoad) return;
@@ -80,21 +94,15 @@ class FrameSdkInstance {
 
 			// set sdk and convenience vars
 			this.#sdk = importedSdk;
-			this.#context = context;
 			this.#isFrameAdded = context.client.added ?? false;
 			if (context.client.safeAreaInsets) this.#safeArea = context.client.safeAreaInsets;
 			this.#isFrame = true;
 
 			// register event listeners
-			this.#sdk.on('frameAdded', async () => {
-				this.#isFrameAdded = true;
-				// wait for notification details to be available
-				await new Promise((resolve) => setTimeout(resolve, 800));
-				this.#context = await this.#sdk!.context;
-			});
-			this.#sdk.on('frameRemoved', async () => {
-				this.#isFrameAdded = false;
-				this.#context = await this.#sdk!.context;
+			this.#unregisterFrameEvents = registerFrameEventListeners(this.#sdk);
+			this.watchFrameEvents({
+				onFrameAdded: async () => (this.#isFrameAdded = true),
+				onFrameRemoved: async () => (this.#isFrameAdded = false),
 			});
 
 			// Run onLoad callback

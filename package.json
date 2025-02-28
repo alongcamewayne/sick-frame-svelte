@@ -36,7 +36,8 @@
 		"svelte": "^5.0.0"
 	},
 	"dependencies": {
-		"@farcaster/frame-sdk": "^0.0.29"
+		"@farcaster/frame-sdk": "^0.0.29",
+		"mitt": "^3.0.1"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",
